@@ -284,13 +284,13 @@ pub fn readLoadCommands(self: *Object, reader: anytype) !void {
 }
 
 pub fn parseSections(self: *Object) !void {
-    log.warn("parsing sections in {s}", .{self.name.?});
+    log.debug("parsing sections in {s}", .{self.name.?});
     const seg = self.load_commands.items[self.segment_cmd_index.?].Segment;
 
     try self.sections.ensureCapacity(self.allocator, seg.sections.items.len);
 
     for (seg.sections.items) |sect| {
-        log.warn("parsing section '{s},{s}'", .{ parseName(&sect.segname), parseName(&sect.sectname) });
+        log.debug("parsing section '{s},{s}'", .{ parseName(&sect.segname), parseName(&sect.sectname) });
         // Read sections' code
         var code = try self.allocator.alloc(u8, sect.size);
         _ = try self.file.?.preadAll(code, sect.offset);
