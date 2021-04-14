@@ -21,7 +21,7 @@ pub const Branch = struct {
     pub fn resolve(branch: Branch, args: Relocation.ResolveArgs) !void {
         const displacement = try math.cast(i28, @intCast(i64, args.target_addr) - @intCast(i64, args.source_addr));
 
-        log.debug("    | displacement 0x{x}", .{displacement});
+        log.warn("    | displacement 0x{x}", .{displacement});
 
         var inst = branch.inst;
         inst.unconditional_branch_immediate.imm26 = @truncate(u26, @bitCast(u28, displacement) >> 2);
@@ -43,8 +43,8 @@ pub const Page = struct {
         const target_page = @intCast(i32, target_addr >> 12);
         const pages = @bitCast(u21, @intCast(i21, target_page - source_page));
 
-        log.debug("    | calculated addend 0x{x}", .{page.addend});
-        log.debug("    | moving by {} pages", .{pages});
+        log.warn("    | calculated addend 0x{x}", .{page.addend});
+        log.warn("    | moving by {} pages", .{pages});
 
         var inst = page.inst;
         inst.pc_relative_address.immhi = @truncate(u19, pages >> 2);
@@ -71,8 +71,8 @@ pub const PageOff = struct {
         const target_addr = if (page_off.addend) |addend| args.target_addr + addend else args.target_addr;
         const narrowed = @truncate(u12, target_addr);
 
-        log.debug("    | narrowed address within the page 0x{x}", .{narrowed});
-        log.debug("    | {s} opcode", .{page_off.op_kind});
+        log.warn("    | narrowed address within the page 0x{x}", .{narrowed});
+        log.warn("    | {s} opcode", .{page_off.op_kind});
 
         var inst = page_off.inst;
         if (page_off.op_kind == .arithmetic) {
@@ -110,7 +110,7 @@ pub const GotPage = struct {
         const target_page = @intCast(i32, args.target_addr >> 12);
         const pages = @bitCast(u21, @intCast(i21, target_page - source_page));
 
-        log.debug("    | moving by {} pages", .{pages});
+        log.warn("    | moving by {} pages", .{pages});
 
         var inst = page.inst;
         inst.pc_relative_address.immhi = @truncate(u19, pages >> 2);
@@ -130,7 +130,7 @@ pub const GotPageOff = struct {
     pub fn resolve(page_off: GotPageOff, args: Relocation.ResolveArgs) !void {
         const narrowed = @truncate(u12, args.target_addr);
 
-        log.debug("    | narrowed address within the page 0x{x}", .{narrowed});
+        log.warn("    | narrowed address within the page 0x{x}", .{narrowed});
 
         var inst = page_off.inst;
         const offset = try math.divExact(u12, narrowed, 8);
@@ -152,7 +152,7 @@ pub const TlvpPage = struct {
         const target_page = @intCast(i32, args.target_addr >> 12);
         const pages = @bitCast(u21, @intCast(i21, target_page - source_page));
 
-        log.debug("    | moving by {} pages", .{pages});
+        log.warn("    | moving by {} pages", .{pages});
 
         var inst = page.inst;
         inst.pc_relative_address.immhi = @truncate(u19, pages >> 2);
@@ -174,7 +174,7 @@ pub const TlvpPageOff = struct {
     pub fn resolve(page_off: TlvpPageOff, args: Relocation.ResolveArgs) !void {
         const narrowed = @truncate(u12, args.target_addr);
 
-        log.debug("    | narrowed address within the page 0x{x}", .{narrowed});
+        log.warn("    | narrowed address within the page 0x{x}", .{narrowed});
 
         var inst = page_off.inst;
         inst.add_subtract_immediate.imm12 = narrowed;
@@ -226,7 +226,9 @@ pub const Parser = struct {
                     try parser.parseTlvpLoadPageOff(rel);
                 },
                 .ARM64_RELOC_POINTER_TO_GOT => {
-                    return error.ToDoRelocPointerToGot;
+                    // TODO Handle pointer to GOT. This reloc seems to appear in
+                    // __LD,__compact_unwind section which we currently don't handle.
+                    log.warn("Unhandled relocation ARM64_RELOC_POINTER_TO_GOT", .{});
                 },
             }
         }
@@ -283,7 +285,7 @@ pub const Parser = struct {
             .inst = parsed_inst,
         };
 
-        log.debug("    | emitting {}", .{branch});
+        log.warn("    | emitting {}", .{branch});
         try parser.parsed.append(&branch.base);
     }
 
@@ -322,7 +324,7 @@ pub const Parser = struct {
                         .inst = parsed_inst,
                     };
 
-                    log.debug("    | emitting {}", .{page});
+                    log.warn("    | emitting {}", .{page});
 
                     break :ptr &page.base;
                 },
@@ -340,7 +342,7 @@ pub const Parser = struct {
                         .inst = parsed_inst,
                     };
 
-                    log.debug("    | emitting {}", .{page});
+                    log.warn("    | emitting {}", .{page});
 
                     break :ptr &page.base;
                 },
@@ -358,7 +360,7 @@ pub const Parser = struct {
                         .inst = parsed_inst,
                     };
 
-                    log.debug("    | emitting {}", .{page});
+                    log.warn("    | emitting {}", .{page});
 
                     break :ptr &page.base;
                 },
@@ -415,7 +417,7 @@ pub const Parser = struct {
             .addend = parser.addend,
         };
 
-        log.debug("    | emitting {}", .{page_off});
+        log.warn("    | emitting {}", .{page_off});
         try parser.parsed.append(&page_off.base);
     }
 
@@ -452,7 +454,7 @@ pub const Parser = struct {
             },
         };
 
-        log.debug("    | emitting {}", .{page_off});
+        log.warn("    | emitting {}", .{page_off});
         try parser.parsed.append(&page_off.base);
     }
 
@@ -519,7 +521,7 @@ pub const Parser = struct {
             },
         };
 
-        log.debug("    | emitting {}", .{page_off});
+        log.warn("    | emitting {}", .{page_off});
         try parser.parsed.append(&page_off.base);
     }
 
@@ -576,7 +578,7 @@ pub const Parser = struct {
             .addend = addend,
         };
 
-        log.debug("    | emitting {}", .{unsigned});
+        log.warn("    | emitting {}", .{unsigned});
         try parser.parsed.append(&unsigned.base);
     }
 };

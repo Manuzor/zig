@@ -1257,8 +1257,7 @@ fn resolveSymbolsInObject(self: *Zld, object_id: u16) !void {
                 },
                 .strong => {
                     if (!is_weak) {
-                        log.err("symbol '{s}' defined multiple times", .{sym_name});
-                        return error.MultipleSymbolDefinitions;
+                        log.debug("strong symbol '{s}' defined multiple times", .{sym_name});
                     }
                     continue;
                 },
@@ -1430,18 +1429,20 @@ fn resolveStubsAndGotEntries(self: *Zld) !void {
 
 fn resolveRelocsAndWriteSections(self: *Zld) !void {
     for (self.objects.items) |object, object_id| {
-        log.debug("relocating object {s}", .{object.name});
+        log.warn("relocating object {s}", .{object.name});
 
         for (object.sections.items) |sect, source_sect_id| {
             const segname = parseName(&sect.inner.segname);
             const sectname = parseName(&sect.inner.sectname);
+
+            log.warn("relocating section '{s},{s}'", .{ segname, sectname });
 
             // Get mapping
             const target_mapping = self.mappings.get(.{
                 .object_id = @intCast(u16, object_id),
                 .source_sect_id = @intCast(u16, source_sect_id),
             }) orelse {
-                log.debug("no mapping for {s},{s}; skipping", .{ segname, sectname });
+                log.warn("no mapping for {s},{s}; skipping", .{ segname, sectname });
                 continue;
             };
             const target_seg = self.load_commands.items[target_mapping.target_seg_id].Segment;
@@ -1574,7 +1575,7 @@ fn relocTargetAddr(self: *Zld, object_id: u16, target: reloc.Relocation.Target) 
                 const sym_name = object.getString(sym.n_strx);
 
                 if (Symbol.isSect(sym)) {
-                    log.debug("    | local symbol '{s}'", .{sym_name});
+                    log.warn("    | local symbol '{s}'", .{sym_name});
                     if (object.locals.get(sym_name)) |local| {
                         break :blk local.address;
                     }
@@ -1594,12 +1595,12 @@ fn relocTargetAddr(self: *Zld, object_id: u16, target: reloc.Relocation.Target) 
                     break :blk sym.n_value - source_sect.addr + target_addr;
                 } else {
                     if (self.stubs.get(sym_name)) |index| {
-                        log.debug("    | symbol stub '{s}'", .{sym_name});
+                        log.warn("    | symbol stub '{s}'", .{sym_name});
                         const segment = self.load_commands.items[self.text_segment_cmd_index.?].Segment;
                         const stubs = segment.sections.items[self.stubs_section_index.?];
                         break :blk stubs.addr + index * stubs.reserved2;
                     } else if (mem.eql(u8, sym_name, "__tlv_bootstrap")) {
-                        log.debug("    | symbol '__tlv_bootstrap'", .{});
+                        log.warn("    | symbol '__tlv_bootstrap'", .{});
                         const segment = self.load_commands.items[self.data_segment_cmd_index.?].Segment;
                         const tlv = segment.sections.items[self.tlv_section_index.?];
                         break :blk tlv.addr;
@@ -1608,7 +1609,7 @@ fn relocTargetAddr(self: *Zld, object_id: u16, target: reloc.Relocation.Target) 
                             log.err("failed to resolve symbol '{s}' as a relocation target", .{sym_name});
                             return error.FailedToResolveRelocationTarget;
                         };
-                        log.debug("    | global symbol '{s}'", .{sym_name});
+                        log.warn("    | global symbol '{s}'", .{sym_name});
                         break :blk global.address;
                     }
                 }

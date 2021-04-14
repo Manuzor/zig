@@ -32,14 +32,14 @@ pub const Relocation = struct {
     };
 
     pub fn resolve(base: *Relocation, args: ResolveArgs) !void {
-        log.debug("{s}", .{base.@"type"});
-        log.debug("    | offset 0x{x}", .{base.offset});
-        log.debug("    | source address 0x{x}", .{args.source_addr});
-        log.debug("    | target address 0x{x}", .{args.target_addr});
+        log.warn("{s}", .{base.@"type"});
+        log.warn("    | offset 0x{x}", .{base.offset});
+        log.warn("    | source address 0x{x}", .{args.source_addr});
+        log.warn("    | target address 0x{x}", .{args.target_addr});
         if (args.subtractor) |sub|
-            log.debug("    | subtractor address 0x{x}", .{sub});
+            log.warn("    | subtractor address 0x{x}", .{sub});
         if (args.source_sect_addr) |addr|
-            log.debug("    | source section address 0x{x}", .{addr});
+            log.warn("    | source section address 0x{x}", .{addr});
 
         return switch (base.@"type") {
             .unsigned => @fieldParentPtr(Unsigned, "base", base).resolve(args),
@@ -112,8 +112,8 @@ pub const Unsigned = struct {
         else
             @intCast(i64, args.target_addr) + addend;
 
-        log.debug("    | calculated addend 0x{x}", .{addend});
-        log.debug("    | calculated unsigned value 0x{x}", .{result});
+        log.warn("    | calculated addend 0x{x}", .{addend});
+        log.warn("    | calculated unsigned value 0x{x}", .{result});
 
         if (unsigned.is_64bit) {
             mem.writeIntLittle(
@@ -178,13 +178,13 @@ pub const RelocIterator = struct {
         self.index += 1;
         if (self.index < self.buffer.len) {
             const reloc = self.buffer[@intCast(u64, self.index)];
-            log.debug("relocation", .{});
-            log.debug("    | type = {}", .{reloc.r_type});
-            log.debug("    | offset = {}", .{reloc.r_address});
-            log.debug("    | PC = {}", .{reloc.r_pcrel == 1});
-            log.debug("    | length = {}", .{reloc.r_length});
-            log.debug("    | symbolnum = {}", .{reloc.r_symbolnum});
-            log.debug("    | extern = {}", .{reloc.r_extern == 1});
+            log.warn("relocation", .{});
+            log.warn("    | type = {}", .{reloc.r_type});
+            log.warn("    | offset = {}", .{reloc.r_address});
+            log.warn("    | PC = {}", .{reloc.r_pcrel == 1});
+            log.warn("    | length = {}", .{reloc.r_length});
+            log.warn("    | symbolnum = {}", .{reloc.r_symbolnum});
+            log.warn("    | extern = {}", .{reloc.r_extern == 1});
             return reloc;
         }
         return null;
